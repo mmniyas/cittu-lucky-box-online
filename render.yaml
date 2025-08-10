@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: cittu-lucky-box
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    autoDeploy: true

@@ -1,0 +1,14 @@
+{
+  "name": "cittu-lucky-box",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Cittu Lucky Box with Tailwind UI and Admin Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

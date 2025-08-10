@@ -1,0 +1,47 @@
+[
+  {
+    "id": "box1",
+    "number": 3,
+    "used": false
+  },
+  {
+    "id": "box2",
+    "number": 7,
+    "used": false
+  },
+  {
+    "id": "box3",
+    "number": 1,
+    "used": false
+  },
+  {
+    "id": "box4",
+    "number": 9,
+    "used": false
+  },
+  {
+    "id": "box5",
+    "number": 2,
+    "used": false
+  },
+  {
+    "id": "box6",
+    "number": 5,
+    "used": false
+  },
+  {
+    "id": "box7",
+    "number": 8,
+    "used": false
+  },
+  {
+    "id": "box8",
+    "number": 4,
+    "used": false
+  },
+  {
+    "id": "box9",
+    "number": 6,
+    "used": false
+  }
+]

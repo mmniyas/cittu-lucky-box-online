@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cittu Lucky Box — Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <header class="px-6 py-5 border-b border-white/10">
+    <h1 class="text-2xl font-bold">Cittu Lucky Box — Admin</h1>
+    <p class="text-slate-400 text-sm mt-1">Protected by a simple admin pass</p>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-6 space-y-8">
+
+    <section class="bg-slate-800/60 rounded-xl p-5 ring-1 ring-white/10">
+      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div class="space-y-2">
+          <label class="block text-sm text-slate-300">Admin Pass</label>
+          <input id="adminPass" type="password" class="px-3 py-2 bg-slate-900/70 rounded-lg ring-1 ring-white/10 w-64" placeholder="enter admin password">
+          <button id="savePass" class="ml-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-lg">Save</button>
+        </div>
+
+        <div class="space-x-3">
+          <button id="btnRefresh" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">Refresh</button>
+          <button id="btnShuffle" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg">Shuffle 1..9</button>
+          <button id="btnReset" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-lg">Reset All</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-3 gap-4">
+      <div class="bg-slate-800/60 rounded-xl p-5 ring-1 ring-white/10">
+        <div class="text-slate-400 text-sm">Boxes used</div>
+        <div id="statUsed" class="text-3xl font-bold mt-1">0/9</div>
+      </div>
+      <div class="bg-slate-800/60 rounded-xl p-5 ring-1 ring-white/10">
+        <div class="text-slate-400 text-sm">Clicks logged</div>
+        <div id="statClicks" class="text-3xl font-bold mt-1">0</div>
+      </div>
+      <div class="bg-slate-800/60 rounded-xl p-5 ring-1 ring-white/10">
+        <div class="text-slate-400 text-sm">Allowed phones</div>
+        <div id="statPhones" class="text-3xl font-bold mt-1">0</div>
+      </div>
+    </section>
+
+    <section class="bg-slate-800/60 rounded-xl p-5 ring-1 ring-white/10">
+      <h2 class="text-lg font-semibold mb-3">Boxes</h2>
+      <div id="boxesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+    </section>
+
+    <section class="bg-slate-800/60 rounded-xl p-5 ring-1 ring-white/10">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">Clicks Log</h2>
+      </div>
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-300">
+              <th class="py-2 pr-4">Time</th>
+              <th class="py-2 pr-4">Phone</th>
+              <th class="py-2 pr-4">Box</th>
+              <th class="py-2 pr-4">Number</th>
+            </tr>
+          </thead>
+          <tbody id="clicksTbody" class="divide-y divide-white/10"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-slate-800/60 rounded-xl p-5 ring-1 ring-white/10">
+      <div class="flex items-end gap-3 mb-4">
+        <div>
+          <label class="block text-sm text-slate-300">Add allowed phone</label>
+          <input id="phoneInput" class="px-3 py-2 bg-slate-900/70 rounded-lg ring-1 ring-white/10" placeholder="e.g. 0771234567"/>
+        </div>
+        <button id="btnAddPhone" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg">Add</button>
+      </div>
+      <ul id="phonesList" class="space-y-2"></ul>
+    </section>
+  </main>
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const passKey = "admin_pass";
+    function getPass() { return localStorage.getItem(passKey) || ""; }
+    function setPass(v) { localStorage.setItem(passKey, v); }
+
+    $("#adminPass").value = getPass();
+
+    $("#savePass").onclick = () => {
+      setPass($("#adminPass").value.trim());
+      alert("Saved");
+    };
+
+    async function api(path, options={}) {
+      const headers = options.headers || {};
+      headers["x-admin-pass"] = getPass();
+      return fetch(path, { ...options, headers });
+    }
+
+    async function loadSummary() {
+      const res = await api("/api/admin/summary");
+      if (res.status === 401) { alert("Wrong admin pass"); return; }
+      const data = await res.json();
+
+      const usedCount = data.boxes.filter(b => b.used).length;
+      $("#statUsed").textContent = usedCount + "/9";
+      $("#statClicks").textContent = data.clicks.length;
+      $("#statPhones").textContent = data.allowed.length;
+
+      const grid = $("#boxesGrid");
+      grid.innerHTML = "";
+      for (const b of data.boxes) {
+        const card = document.createElement("div");
+        card.className = "rounded-lg p-4 ring-1 ring-white/10 bg-slate-900/60";
+        card.innerHTML = `
+          <div class="text-sm text-slate-400">ID: ${b.id}</div>
+          <div class="mt-1 text-xl font-bold">Number: ${b.number}</div>
+          <div class="mt-1 ${b.used ? "text-rose-400" : "text-emerald-400"} font-semibold">
+            ${b.used ? "USED" : "AVAILABLE"}
+          </div>
+          ${b.phone ? `<div class="text-sm mt-1 text-slate-300">by ${b.phone}</div>` : ""}
+          ${b.time ? `<div class="text-xs text-slate-400">${new Date(b.time).toLocaleString()}</div>` : ""}
+        `;
+        grid.appendChild(card);
+      }
+
+      const tbody = $("#clicksTbody");
+      tbody.innerHTML = "";
+      for (const c of data.clicks.slice().reverse()) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="py-2 pr-4 text-slate-300">${new Date(c.time).toLocaleString()}</td>
+          <td class="py-2 pr-4">${c.phone}</td>
+          <td class="py-2 pr-4">${c.boxId}</td>
+          <td class="py-2 pr-4 font-semibold">${c.number}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      const ul = $("#phonesList");
+      ul.innerHTML = "";
+      for (const p of data.allowed) {
+        const li = document.createElement("li");
+        li.className = "flex items-center justify-between bg-slate-900/60 rounded-lg p-3 ring-1 ring-white/10";
+        li.innerHTML = `
+          <span>${p}</span>
+          <button data-p="${p}" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded">Remove</button>
+        `;
+        li.querySelector("button").onclick = async (e) => {
+          const phone = e.target.getAttribute("data-p");
+          if (!confirm("Remove " + phone + "?")) return;
+          const res = await api("/api/admin/allow?phone="+encodeURIComponent(phone), { method:"DELETE" });
+          if (res.ok) loadSummary();
+        };
+        ul.appendChild(li);
+      }
+    }
+
+    $("#btnRefresh").onclick = loadSummary;
+    $("#btnShuffle").onclick = async () => {
+      if (!confirm("Shuffle numbers and reset usage?")) return;
+      const res = await api("/api/admin/shuffle", { method:"POST" });
+      if (res.ok) loadSummary();
+    };
+    $("#btnReset").onclick = async () => {
+      if (!confirm("Reset all boxes and clear clicks?")) return;
+      const res = await api("/api/admin/reset", { method:"POST" });
+      if (res.ok) loadSummary();
+    };
+    $("#btnAddPhone").onclick = async () => {
+      const phone = $("#phoneInput").value.trim();
+      if (!phone) return alert("Enter a phone");
+      const res = await api("/api/admin/allow", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ phone })
+      });
+      if (res.ok) { $("#phoneInput").value=""; loadSummary(); }
+    };
+
+    loadSummary();
+  </script>
+</body>
+</html>

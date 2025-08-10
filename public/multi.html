@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cittu Lucky Box 🎁</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes spinY { from { transform: rotateY(0deg);} to { transform: rotateY(360deg);} }
+    .rotateY { animation: spinY 0.9s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-800 text-white min-h-screen flex flex-col">
+
+  <header class="py-8 text-center">
+    <h1 class="text-3xl md:text-4xl font-bold">🎁 Cittu Lucky Box 🎁</h1>
+    <p class="text-gray-300 mt-2">Click one box only. Your attempt will be recorded.</p>
+  </header>
+
+  <main class="flex-1">
+    <div id="grid" class="grid grid-cols-3 gap-4 max-w-md mx-auto px-4"></div>
+
+    <section class="max-w-2xl mx-auto mt-10 px-4">
+      <div class="bg-gray-900/60 rounded-xl p-5 ring-1 ring-white/10">
+        <h2 class="text-xl font-semibold mb-3">📜 Terms &amp; Conditions</h2>
+        <ul class="list-disc list-inside space-y-1 text-gray-300 text-sm leading-6">
+          <li>You are allowed to click <strong>one</strong> box only.</li>
+          <li>This link works only for the verified phone number (last 4 digits).</li>
+          <li>Your click (phone, time, box) is logged for admin records.</li>
+          <li>If a box is already used by someone else, it shows <span class="text-red-400">Locked</span> in red.</li>
+          <li>On your click, your chosen box turns <span class="text-green-400">green</span> and all others lock.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mt-12 py-6 text-center text-sm text-gray-300 bg-gray-900/40">
+    <div class="space-y-1">
+      <p>Created by: <strong>mm.Niyas</strong> — <a href="mailto:thulisoft@gmail.com" class="text-sky-300 underline">thulisoft@gmail.com</a></p>
+      <p>📍 ஸ்ரீலங்கா (Sri Lanka)</p>
+      <p class="italic text-gray-400">இந்த அமைப்பு முழுவதும் துலிஸாஃப்ட் (Thulisoft) குழுமத்தால் உருவாக்கப்பட்டது.</p>
+    </div>
+  </footer>
+
+  <script>
+    let phone = null;
+    let boxes = [];
+    let clicked = false;
+
+    async function resolvePhone() {
+      while (true) {
+        const last4 = prompt("Enter last 4 digits of your phone:");
+        if (!last4) return false;
+        const res = await fetch('/api/resolve-phone', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ last4 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          phone = data.phone;
+          return true;
+        } else {
+          alert(data.message || 'Not allowed');
+        }
+      }
+    }
+
+    async function loadBoxes() {
+      const res = await fetch('/api/boxes');
+      boxes = await res.json();
+    }
+
+    function boxClass(base = true) {
+      return [
+        'aspect-square','rounded-2xl','flex','items-center','justify-center',
+        'text-base','font-semibold','select-none','shadow','transition',
+        'ring-1','ring-white/10',
+        base ? 'bg-orange-500 hover:bg-orange-400 active:scale-95 cursor-pointer' : ''
+      ].join(' ');
+    }
+
+    function render() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 9; i++) {
+        const id = boxes[i].id;
+        const used = !!boxes[i].used;
+
+        const div = document.createElement('button');
+        div.type = 'button';
+        div.dataset.id = id;
+
+        if (used) {
+          div.className = boxClass(false) + ' bg-red-600 cursor-not-allowed';
+          div.textContent = 'Locked';
+        } else {
+          div.className = boxClass(true);
+          div.textContent = 'Click Me';
+          div.onclick = async () => {
+            if (clicked) return;
+
+            div.classList.add('rotateY');
+
+            const res = await fetch(`/click?id=${encodeURIComponent(id)}&phone=${encodeURIComponent(phone)}`);
+            const data = await res.json();
+
+            if (data.success) {
+              div.className = boxClass(false) + ' bg-green-600';
+              div.textContent = `🎉 ${data.number} 🎉`;
+              clicked = true;
+
+              document.querySelectorAll('#grid > *').forEach(el => {
+                if (el !== div) {
+                  el.className = boxClass(false) + ' bg-red-600 cursor-not-allowed';
+                  el.textContent = 'Locked';
+                  el.onclick = null;
+                }
+              });
+            } else {
+              alert(data.message || 'Error');
+              div.classList.remove('rotateY');
+            }
+          };
+        }
+
+        grid.appendChild(div);
+      }
+    }
+
+    (async function init() {
+      const ok = await resolvePhone();
+      if (!ok) return;
+      await loadBoxes();
+      render();
+    })();
+  </script>
+</body>
+</html>
